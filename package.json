@@ -1,0 +1,15 @@
+{
+  "name": "openrouter-free-opencode-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node src/server.ts",
+    "start": "node src/server.ts",
+    "build": "node --check src/server.ts && node --check src/gateway.ts && node --check src/model.ts",
+    "test": "node --test test/*.test.ts"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "openrouter-free-local": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "OpenRouter Free Local",
+      "options": {
+        "baseURL": "http://127.0.0.1:4141/v1"
+      },
+      "models": {
+        "openrouter/free-auto": {
+          "name": "OpenRouter Free Auto"
+        }
+      }
+    }
+  }
+}
