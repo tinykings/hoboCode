@@ -9,6 +9,7 @@ import {
 } from './model.ts';
 
 export type GatewayConfig = {
+  lazyRefresh?: boolean;
   host: string;
   port: number;
   openRouterApiKey: string;
@@ -28,6 +29,7 @@ export type RefreshState = {
   lastLoggedCurrentModel?: string;
   lastLoggedUsedModel?: string;
   refreshInFlight: boolean;
+  requestCount: number;
 };
 
 type UpstreamFailure = {
@@ -47,11 +49,17 @@ export function createGateway(config: GatewayConfig, fetchImpl: ProbeFetch = fet
   const state: RefreshState = {
     rankedModels: [],
     refreshInFlight: false,
+    requestCount: 0,
   };
 
-  async function handleRequest(req: IncomingMessage, res: ServerResponse) {
-    try {
-      const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+async function handleRequest(req: IncomingMessage, res: ServerResponse) {
+state.requestCount++;
+  try {
+    const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+    if (state.requestCount === 1 && state.rankedModels.length === 0) {
+      await refreshModels();
+    }
+    // existing routing logic...
 
       if (req.method === 'OPTIONS') {
         writeCors(res);
@@ -97,8 +105,12 @@ export function createGateway(config: GatewayConfig, fetchImpl: ProbeFetch = fet
           error instanceof Error ? error.message : 'Unexpected server error',
         ),
       );
-    }
-  }
+      }
++    } finally {
++      state.requestCount--;
++    }
+   }
+
 
   async function refreshModels() {
     if (state.refreshInFlight) return;
@@ -152,7 +164,9 @@ export function createGateway(config: GatewayConfig, fetchImpl: ProbeFetch = fet
 
 export async function startGateway(config: GatewayConfig) {
   const gateway = createGateway(config);
-  await gateway.refreshModels();
+  if (!config.lazyRefresh) {
+    await gateway.refreshModels();
+  }
 
   gateway.server.listen(config.port, config.host, () => {
     console.log(
@@ -163,9 +177,11 @@ export async function startGateway(config: GatewayConfig) {
     logCurrentModelChange(gateway.state);
   });
 
-  setInterval(() => {
-    void gateway.refreshModels();
-  }, config.refreshIntervalMs).unref();
+  if (!config.lazyRefresh) {
+    setInterval(() => {
+      void gateway.refreshModels();
+    }, config.refreshIntervalMs).unref();
+  }
 }
 
 export function readConfig(env: NodeJS.ProcessEnv): GatewayConfig {
@@ -180,6 +196,7 @@ export function readConfig(env: NodeJS.ProcessEnv): GatewayConfig {
     openRouterApiKey,
     localApiKey: env.LOCAL_API_KEY,
     openRouterBaseUrl: env.OPENROUTER_BASE_URL ?? 'https://openrouter.ai/api/v1',
+      lazyRefresh: env.LAZY_REFRESH ? env.LAZY_REFRESH !== '0' : true,
     refreshIntervalMs: readIntEnv(env.REFRESH_INTERVAL_MS, 30 * 60 * 1000),
     probeConcurrency: readIntEnv(env.PROBE_CONCURRENCY, 4),
     probeTimeoutMs: readIntEnv(env.PROBE_TIMEOUT_MS, 10_000),

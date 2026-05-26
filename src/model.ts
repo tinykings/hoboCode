@@ -155,7 +155,7 @@ export async function probeModel(options: {
 
 function normalizeModel(item: unknown): NormalizedModel | null {
   if (!isRecord(item)) return null;
-  if (typeof item.id !== 'string' || !item.id.endsWith(':free')) return null;
+  if (typeof item.id !== 'string') return null;
   if (!Number.isFinite(item.context_length) || item.context_length <= 0) {
     return null;
   }
