@@ -52,14 +52,13 @@ export function createGateway(config: GatewayConfig, fetchImpl: ProbeFetch = fet
     requestCount: 0,
   };
 
-async function handleRequest(req: IncomingMessage, res: ServerResponse) {
-state.requestCount++;
-  try {
-    const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
-    if (state.requestCount === 1 && state.rankedModels.length === 0) {
-      await refreshModels();
-    }
-    // existing routing logic...
+  async function handleRequest(req: IncomingMessage, res: ServerResponse) {
+    state.requestCount++;
+    try {
+      const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+      if (state.requestCount === 1 && state.rankedModels.length === 0) {
+        await refreshModels();
+      }
 
       if (req.method === 'OPTIONS') {
         writeCors(res);
@@ -105,11 +104,10 @@ state.requestCount++;
           error instanceof Error ? error.message : 'Unexpected server error',
         ),
       );
-      }
-+    } finally {
-+      state.requestCount--;
-+    }
-   }
+    } finally {
+      state.requestCount--;
+    }
+  }
 
 
   async function refreshModels() {
